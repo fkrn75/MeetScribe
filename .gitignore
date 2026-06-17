@@ -1,0 +1,61 @@
+# === Python (사이드카) ===
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+
+# === 모델 가중치 / 캐시 (대용량, 비동봉) ===
+*.bin
+*.pt
+*.onnx
+*.ckpt
+models/
+.cache/
+huggingface/
+torch_cache/
+
+# === Node / 프론트엔드 ===
+node_modules/
+dist/
+dist-ssr/
+.vite/
+
+# === Tauri / Rust ===
+src-tauri/target/
+target/
+**/*.rs.bk
+
+# === 빌드 산출물 / 인스톨러 ===
+build/
+*.msi
+*.exe
+*.app
+
+# === 오디오·영상 샘플, 프로젝트 결과물 (개인정보·대용량) ===
+*.wav
+*.mp3
+*.m4a
+*.mp4
+*.mov
+*.flac
+*.ogg
+samples/
+*.msz
+
+# === 비밀·환경 (HF 토큰 등) ===
+.env
+.env.local
+*.local
+secrets.*
+
+# === OS / 에디터 ===
+Thumbs.db
+desktop.ini
+.DS_Store
+.idea/
+.vscode/
+*.log
