@@ -1,0 +1,61 @@
+# MeetScribe 사이드카 패키지 정의
+# ─────────────────────────────────────────────────────────────
+# 빌드(개발 설치): pip install -e .   (Python 3.12 venv 권장)
+# 콘솔 스크립트:   meetscribe-sidecar  → meetscribe.api:main (서버 기동)
+#                  meetscribe         → meetscribe.cli:main  (파일→SRT CLI)
+# 동결 빌드:       PyInstaller 진입점은 sidecar.spec(아래 [tool.meetscribe] 참고)
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "meetscribe"
+version = "0.1.0"
+description = "로컬 화자분리 회의록 처리 엔진(사이드카)"
+readme = "../README.md"
+requires-python = ">=3.10,<3.13"   # 3.12 권장. ML 휠 가용성 때문에 3.13+ 제외.
+license = { text = "MIT" }
+
+# 런타임 의존성은 requirements.txt 와 동기화(핀 코멘트는 그쪽 참조).
+# pyproject 에는 대역만 둔다 — 무거운 ML 패키지는 환경별 설치 절차가 달라
+# requirements.txt 의 안내(별도 index-url 등)를 따르는 것을 권장.
+dependencies = [
+    "fastapi>=0.110,<1.0",
+    "uvicorn[standard]>=0.27,<1.0",
+    "pydantic>=2.6,<3.0",
+    "sse-starlette>=2.0,<3.0",
+    "python-docx>=1.1,<2.0",
+    # ML 스택(설치 시 requirements.txt 절차 참고):
+    "torch>=2.2,<2.4",
+    "whisperx>=3.1,<4.0",
+    "faster-whisper>=1.0,<2.0",
+    "pyannote.audio>=3.1,<4.0",
+]
+
+[project.scripts]
+# 사이드카 서버 진입점(Tauri externalBin 이 이 실행파일을 spawn).
+meetscribe-sidecar = "meetscribe.api:main"
+# 단독 CLI(M1, 파일→SRT). pipeline 팀원의 cli.py 가 제공.
+meetscribe = "meetscribe.cli:main"
+
+[tool.setuptools.packages.find]
+# sidecar/ 안의 meetscribe 패키지(및 하위)를 모두 포함.
+include = ["meetscribe*"]
+
+# ─────────────────────────────────────────────────────────────
+# PyInstaller 동결 빌드 메모(실제 .spec 은 환경 구축 후 작성)
+# ─────────────────────────────────────────────────────────────
+# 진입 스크립트 예: sidecar/entry.py
+#   from meetscribe.api import main
+#   if __name__ == "__main__":
+#       main()
+# 빌드 명령(예):
+#   pyinstaller --onefile --name meetscribe-sidecar entry.py \
+#     --collect-all whisperx --collect-all pyannote --collect-all faster_whisper \
+#     --collect-all torch --collect-data lightning_fabric
+# 산출 바이너리를 src-tauri 의 externalBin 경로로 복사(T4 정합).
+[tool.meetscribe]
+sidecar_entry = "meetscribe.api:main"
+cli_entry = "meetscribe.cli:main"
+default_port = 8765

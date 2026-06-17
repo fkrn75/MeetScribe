@@ -1,0 +1,70 @@
+/* MeetScribe 전역 스타일 + 디자인 토큰(다크 테마 기본).
+   각 컴포넌트는 var(--token, fallback) 형태로 이 값을 참조한다. */
+
+:root {
+  /* 표면 */
+  --bg: #12151c;
+  --panel: #1b2029;
+  --panel-hover: #222a36;
+  --input: #161b22;
+  --track: #2a3040;
+
+  /* 경계 */
+  --border: #3a4150;
+  --border-faint: #232a35;
+
+  /* 텍스트 */
+  --text: #e6e9ef;
+  --muted: #9aa3ad;
+
+  /* 강조/상태 (설계서 화자 색상과 동일 계열) */
+  --accent: #3b6fd4;
+  --danger: #d4456f;
+  --warn: #e0a14a;
+
+  color-scheme: dark;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic",
+    "Apple SD Gothic Neo", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+#app {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 스크롤바(다크) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+button {
+  font-family: inherit;
+}

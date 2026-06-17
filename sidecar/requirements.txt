@@ -1,0 +1,29 @@
+# MeetScribe 사이드카 의존성
+# ─────────────────────────────────────────────────────────────
+# ⚠️ Python 3.12 권장. 3.13/3.14 는 torch·whisperx·pyannote 휠 부재 위험이 크다.
+#    (이 PC는 현재 3.14라 설치 검증 불가 — 환경 구축 시 3.12 venv 사용)
+# 설치 순서 팁:
+#   1) 먼저 CUDA 빌드 torch 를 별도 설치(아래 주석의 index-url) → 그 다음 이 파일.
+#   2) pyannote 는 gated 모델 → HF 토큰(약관 동의) 필요. 무료.
+# 버전은 상호 호환이 확인된 대역으로 핀(필요 시 환경에 맞춰 조정).
+
+# ── API 서버(여기서만 최상단 import) ─────────────────────────
+fastapi>=0.110,<1.0
+uvicorn[standard]>=0.27,<1.0
+pydantic>=2.6,<3.0
+sse-starlette>=2.0,<3.0          # SSE 헬퍼(현재 표준 StreamingResponse 사용, 향후 전환 대비)
+
+# ── STT / 정렬 / 화자분리(파이프라인 — 전부 lazy import) ──────
+# torch 는 CUDA 빌드를 권장(8GB VRAM, RTX 3070). 예시(CUDA 12.1):
+#   pip install torch==2.2.* --index-url https://download.pytorch.org/whl/cu121
+torch>=2.2,<2.4
+whisperx>=3.1,<4.0              # faster-whisper + wav2vec2 정렬 통합
+faster-whisper>=1.0,<2.0        # whisperx 가 내부 사용(명시 핀)
+pyannote.audio>=3.1,<4.0        # 화자분리 3.1 (gated, HF 토큰 필요)
+
+# ── 내보내기 ─────────────────────────────────────────────────
+python-docx>=1.1,<2.0          # DOCX 회의록(exporters/docx_.py 에서 lazy import)
+
+# ── 비고 ─────────────────────────────────────────────────────
+# ffmpeg 는 pip 패키지가 아니라 시스템 바이너리다(전처리 subprocess). 별도 설치:
+#   Windows: winget install Gyan.FFmpeg  (또는 정적 빌드 PATH 등록)
