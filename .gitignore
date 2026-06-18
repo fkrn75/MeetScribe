@@ -45,6 +45,10 @@ build/
 *.ogg
 samples/
 *.msz
+# 처리 결과물(회의 내용 — 전사 SRT/문서, 커밋 금지)
+_out/
+*.srt
+*.docx
 
 # === 비밀·환경 (HF 토큰 등) ===
 .env

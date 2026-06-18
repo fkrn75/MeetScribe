@@ -59,7 +59,10 @@ class AppConfig:
     # 메모리 단편화·드라이버 누수까지 차단(설계서 §10, pyannote 3h/23화자 18GB+).
     # 기본 False(in-process). 환경 구축 후 2~3h 장시간에서 OOM 붕괴가 확인되면
     # True 로 켠다. runner 가 이 플래그로 in-process / subprocess 경로를 분기.
-    diarize_in_subprocess: bool = False
+    diarize_in_subprocess: bool = field(
+        default_factory=lambda: os.environ.get("MEETSCRIBE_DIARIZE_SUBPROCESS", "").lower()
+        in ("1", "true", "yes")
+    )
 
     # pyannote는 gated 모델 → HF 토큰 필요(약관 동의용, 무료).
     hf_token: Optional[str] = field(default_factory=lambda: os.environ.get("HF_TOKEN"))

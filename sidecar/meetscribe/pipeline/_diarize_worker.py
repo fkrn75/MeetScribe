@@ -212,10 +212,18 @@ def run(argv: list[str] | None = None) -> int:
         return 1
 
     # diarize 는 무거운 import(pyannote·torch)를 함수 내부에서 lazy 로 한다.
-    # 그러므로 여기서 모듈을 import 해도(미설치 환경) 호출 전까지는 안전하지만,
-    # 안전하게 함수 안에서 import 한다.
     try:
-        from . import diarize as diarize_mod  # lazy: ML 의존 경로 진입 직전
+        # torch 2.6+ weights_only 호환 셔틀(pyannote 체크포인트 로드). subprocess 는
+        # 깨끗한 프로세스라 speechbrain 오염은 없지만 weights_only 는 여기서도 필요.
+        from ._compat import ensure_speechbrain_compat, ensure_torch_load_compat
+
+        ensure_torch_load_compat()
+        ensure_speechbrain_compat()  # 깨끗한 subprocess + k2_fsa 스텁 → speechbrain 순회 통과
+        # __init__ 이 동명 함수로 모듈을 가리므로(`from . import diarize` 는 함수가 잡힘)
+        # importlib 로 모듈 객체를 직접 확보한다(runner 와 동일한 회피).
+        import importlib
+
+        diarize_mod = importlib.import_module("meetscribe.pipeline.diarize")
 
         _emit_progress(0.0, "subprocess 화자분리 시작")
         turns = diarize_mod.diarize(

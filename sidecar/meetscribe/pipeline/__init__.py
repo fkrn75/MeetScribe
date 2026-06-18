@@ -18,6 +18,13 @@
 
 from __future__ import annotations
 
+# speechbrain 1.x 의 lazy 모듈(k2_fsa/nlp 등)이 inspect 모듈순회에서 강제 import 되며
+# 깨지는 것을, 아래 무거운 import 체인(transcribe 등)보다 **먼저** 스텁으로 차단한다.
+# (worker 를 `-m` 으로 실행하면 이 __init__ 가 가장 먼저 도므로 여기가 가장 이른 지점)
+from ._compat import ensure_speechbrain_compat as _ensure_sb
+
+_ensure_sb()
+
 from .align import align
 from .diarize import diarize
 from .merge import assign_speakers

@@ -38,11 +38,18 @@ from ..schemas import (
     Segment,
     TranscriptionResult,
 )
-from . import align as align_mod
-from . import diarize as diarize_mod
-from . import merge as merge_mod
-from . import preprocess as preprocess_mod
-from . import transcribe as transcribe_mod
+# 패키지 __init__ 이 `from .align import align` 로 모듈을 동명 함수로 가린다.
+# 그래서 `from . import align as align_mod` 도, `import meetscribe.pipeline.align as
+# align_mod` 도 (둘 다 getattr(pipeline, 'align') 경로라) 함수를 잡아
+# 'function' object has no attribute 'align' 이 난다. importlib.import_module 은
+# sys.modules 의 모듈 객체를 직접 반환하므로 가림과 무관하게 항상 모듈을 보장한다.
+import importlib
+
+align_mod = importlib.import_module("meetscribe.pipeline.align")
+diarize_mod = importlib.import_module("meetscribe.pipeline.diarize")
+merge_mod = importlib.import_module("meetscribe.pipeline.merge")
+preprocess_mod = importlib.import_module("meetscribe.pipeline.preprocess")
+transcribe_mod = importlib.import_module("meetscribe.pipeline.transcribe")
 from ._diarize_worker import (
     ERROR_PREFIX,
     PROGRESS_PREFIX,
@@ -85,6 +92,12 @@ def run_pipeline(
         FileNotFoundError / RuntimeError: 입력 부재·ffmpeg/모델 실패 등.
     """
     started = time.monotonic()
+    # torch 2.6+ 는 torch.load(weights_only=True) 가 기본 → pyannote/whisperx 의
+    # VAD·화자분리 체크포인트(omegaconf 등 비텐서 객체 포함) 로드가 UnpicklingError 로
+    # 깨진다. HF 공식(신뢰) 모델이므로 weights_only=False 로 되돌리는 셔틀을 1회 적용.
+    from ._compat import ensure_speechbrain_compat, ensure_torch_load_compat
+    ensure_torch_load_compat()
+    ensure_speechbrain_compat()
     # 체크포인트·임시 WAV 를 모아 둘 작업 디렉토리(작업별 격리, 끝나면 정리).
     work_dir = Path(tempfile.mkdtemp(prefix="meetscribe_job_"))
     wav_path: str | None = None

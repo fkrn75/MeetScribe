@@ -14,12 +14,14 @@ pydantic>=2.6,<3.0
 sse-starlette>=2.0,<3.0          # SSE 헬퍼(현재 표준 StreamingResponse 사용, 향후 전환 대비)
 
 # ── STT / 정렬 / 화자분리(파이프라인 — 전부 lazy import) ──────
-# torch 는 CUDA 빌드를 권장(8GB VRAM, RTX 3070). 예시(CUDA 12.1):
-#   pip install torch==2.2.* --index-url https://download.pytorch.org/whl/cu121
-torch>=2.2,<2.4
-whisperx>=3.1,<4.0              # faster-whisper + wav2vec2 정렬 통합
-faster-whisper>=1.0,<2.0        # whisperx 가 내부 사용(명시 핀)
-pyannote.audio>=3.1,<4.0        # 화자분리 3.1 (gated, HF 토큰 필요)
+# ⚠️ torch/torchaudio 는 이 파일로 자동설치하지 않는다(PyPI Windows 휠 = CPU 빌드 → CUDA 불가).
+#    반드시 CUDA 인덱스로 먼저 설치한 뒤, 이 파일의 나머지를 설치할 것:
+#      pip install torch==2.8.0+cu128 torchaudio==2.8.0+cu128 --index-url https://download.pytorch.org/whl/cu128
+#      pip install -r requirements.txt   # ← torch 가 이미 있으면 whisperx 가 그걸 재사용(다운그레이드 안 함)
+#    (torch 2.8 / torchaudio 2.8 은 위 명령으로 충족. 실측: whisperx 3.7.9 가 torch 2.8 로 resolve)
+whisperx>=3.1,<4.0             # faster-whisper + wav2vec2 정렬 통합 (실측 3.7.9)
+faster-whisper>=1.0,<2.0       # whisperx 가 내부 사용(명시 핀, 실측 1.2.1)
+pyannote.audio>=3.1,<4.0       # 화자분리 (gated, HF 토큰 필요, 실측 3.4.0)
 
 # ── 내보내기 ─────────────────────────────────────────────────
 python-docx>=1.1,<2.0          # DOCX 회의록(exporters/docx_.py 에서 lazy import)

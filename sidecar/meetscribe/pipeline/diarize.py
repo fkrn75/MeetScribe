@@ -108,10 +108,11 @@ def _diarize_window(
 ) -> list[DiarizationTurn]:
     """[offset, offset+duration) 구간만 잘라 화자분리하고, 전역 시간축으로 보정한다.
 
-    pyannote 의 ``Segment`` 크롭으로 부분 처리한다. 반환 turn 의 start/end 는
-    **전역(오디오 전체) 시간** 기준(offset 이 이미 더해져 있음).
+    pyannote Pipeline 에는 crop 메서드가 없다. ``Audio.crop`` 으로 해당 구간의
+    파형만 잘라 ``pipeline({"waveform","sample_rate"})`` 로 넘긴다. 잘린 파형은
+    0초부터 시작하므로, 결과 turn 시간에 offset 을 더해 **전역 시간축**으로 복원한다.
     """
-    from pyannote.audio.pipelines.utils.hook import ProgressHook  # noqa: F401 (가용성 표식)
+    from pyannote.audio import Audio  # lazy
     from pyannote.core import Segment as PaSegment  # lazy
 
     apply_kwargs: dict = {}
@@ -121,19 +122,25 @@ def _diarize_window(
         apply_kwargs["max_speakers"] = max_speakers
 
     if duration_sec > 0:
-        # 부분 구간만 처리(전체 로드 후 크롭) → 메모리·시간 절약.
-        crop = PaSegment(offset_sec, offset_sec + duration_sec)
-        annotation = pipeline.crop(wav_path, crop, **apply_kwargs)
+        # 부분 구간 파형만 추출(Audio.crop) → pipeline 에 dict 입력. 메모리·시간 절약.
+        audio = Audio()
+        window = PaSegment(offset_sec, offset_sec + duration_sec)
+        waveform, sample_rate = audio.crop(wav_path, window)
+        annotation = pipeline(
+            {"waveform": waveform, "sample_rate": sample_rate}, **apply_kwargs
+        )
+        time_offset = offset_sec  # 잘린 파형은 0 기준 → 전역 시간으로 보정
     else:
         annotation = pipeline(wav_path, **apply_kwargs)
+        time_offset = 0.0
 
     turns: list[DiarizationTurn] = []
     for segment, _track, speaker in annotation.itertracks(yield_label=True):
         turns.append(
             DiarizationTurn(
                 speaker=str(speaker),
-                start=float(segment.start),
-                end=float(segment.end),
+                start=float(segment.start) + time_offset,
+                end=float(segment.end) + time_offset,
             )
         )
     turns.sort(key=lambda t: (t.start, t.end))

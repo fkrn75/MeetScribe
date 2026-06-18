@@ -13,7 +13,8 @@ build-backend = "setuptools.build_meta"
 name = "meetscribe"
 version = "0.1.0"
 description = "로컬 화자분리 회의록 처리 엔진(사이드카)"
-readme = "../README.md"
+# readme 는 PyPI long_description 용이지만, PEP 517 빌드 격리가 sidecar 밖
+# ../README.md 접근을 차단해 editable 설치가 깨진다. 배포는 PyInstaller 라 불필요 → 제거.
 requires-python = ">=3.10,<3.13"   # 3.12 권장. ML 휠 가용성 때문에 3.13+ 제외.
 license = { text = "MIT" }
 
@@ -26,11 +27,10 @@ dependencies = [
     "pydantic>=2.6,<3.0",
     "sse-starlette>=2.0,<3.0",
     "python-docx>=1.1,<2.0",
-    # ML 스택(설치 시 requirements.txt 절차 참고):
-    "torch>=2.2,<2.4",
-    "whisperx>=3.1,<4.0",
-    "faster-whisper>=1.0,<2.0",
-    "pyannote.audio>=3.1,<4.0",
+    # ⚠️ ML 스택(torch/torchaudio/whisperx/faster-whisper/pyannote)은 여기에 두지 않는다.
+    #    여기에 핀을 두면 `pip install -e` 가 CUDA 빌드(torch==2.8.0+cu128)를
+    #    PyPI CPU 빌드로 덮어써 CUDA 가 사라진다(2026-06 실제 발생: 2.8.0+cu128→2.3.1 CPU).
+    #    ML 은 반드시 requirements.txt 의 별도 절차(--index-url)로 설치한다.
 ]
 
 [project.scripts]
