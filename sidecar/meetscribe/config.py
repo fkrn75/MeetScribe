@@ -53,6 +53,14 @@ class AppConfig:
     # STT와 화자분리 모델을 동시에 올리면 8GB 초과 → 순차 로드/언로드.
     sequential_load: bool = True
 
+    # 적대검증 P0 처방 ③ — 프로세스 격리:
+    # 화자분리(pyannote)를 별도 subprocess 에서 돌려, 단계 종료 시 프로세스째
+    # 죽여 OS 가 GPU/RAM 을 완전히 회수하게 한다. empty_cache() 로는 못 푸는
+    # 메모리 단편화·드라이버 누수까지 차단(설계서 §10, pyannote 3h/23화자 18GB+).
+    # 기본 False(in-process). 환경 구축 후 2~3h 장시간에서 OOM 붕괴가 확인되면
+    # True 로 켠다. runner 가 이 플래그로 in-process / subprocess 경로를 분기.
+    diarize_in_subprocess: bool = False
+
     # pyannote는 gated 모델 → HF 토큰 필요(약관 동의용, 무료).
     hf_token: Optional[str] = field(default_factory=lambda: os.environ.get("HF_TOKEN"))
 
