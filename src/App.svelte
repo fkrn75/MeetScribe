@@ -29,6 +29,7 @@
   import type { ProgressEvent, SystemInfo } from "./lib/types";
 
   import Dropzone from "./lib/components/Dropzone.svelte";
+  import Hero from "./lib/components/Hero.svelte";
   import ProgressBar from "./lib/components/ProgressBar.svelte";
   import TranscriptView from "./lib/components/TranscriptView.svelte";
   import SpeakerPanel from "./lib/components/SpeakerPanel.svelte";
@@ -225,15 +226,20 @@
         <Dropzone onPick={onPick} />
       </div>
     {:else if view === "processing"}
-      <div class="center narrow">
-        <ProgressBar
-          stage={jobState.stage}
-          percent={jobState.percent}
-          message={jobState.message}
-          etaSeconds={jobState.etaSeconds}
-          cancelling={cancelling}
-          onCancel={onCancel}
-        />
+      <div class="center">
+        <Hero active>
+          <div class="pbar">
+            <ProgressBar
+              bare
+              stage={jobState.stage}
+              percent={jobState.percent}
+              message={jobState.message}
+              etaSeconds={jobState.etaSeconds}
+              cancelling={cancelling}
+              onCancel={onCancel}
+            />
+          </div>
+        </Hero>
       </div>
     {:else if view === "error"}
       <div class="center narrow">
@@ -273,8 +279,9 @@
     align-items: center;
     gap: 14px;
     padding: 12px 18px;
-    border-bottom: 1px solid var(--border, #3a4150);
-    background: var(--panel, #1b2029);
+    /* 레퍼런스의 따뜻한 다크 상단바(배경 #1a1512 보다 한 톤 위) */
+    border-bottom: 1px solid #2d231b;
+    background: #211a15;
   }
   .brand {
     display: flex;
@@ -291,7 +298,7 @@
   .tag {
     font-size: 11px;
     color: var(--muted, #9aa3ad);
-    border: 1px solid var(--border, #3a4150);
+    border: 1px solid #3a2e22;
     padding: 1px 7px;
     border-radius: 999px;
   }
@@ -343,6 +350,9 @@
   }
   .center.narrow > :global(*) {
     width: min(560px, 100%);
+  }
+  .pbar {
+    width: min(460px, 82vw);
   }
 
   /* 결과: 좌(트랜스크립트) + 우(화자 패널) */

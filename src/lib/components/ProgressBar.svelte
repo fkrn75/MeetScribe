@@ -2,6 +2,7 @@
   /**
    * 진행바 — 현재 단계명 + 전체 퍼센트 + (선택)ETA + 취소 버튼.
    * 장시간 작업이 1급 요구사항이므로 단계/퍼센트/취소를 항상 노출한다(설계서 1.3).
+   * bare=true 면 카드 배경/패딩 없이 텍스트처럼 렌더(히어로 하단에 얹을 때).
    */
   import type { JobStage } from "../types";
 
@@ -12,6 +13,7 @@
     etaSeconds = null,
     cancelling = false,
     onCancel,
+    bare = false,
   }: {
     stage: JobStage;
     percent: number;
@@ -19,6 +21,7 @@
     etaSeconds?: number | null;
     cancelling?: boolean;
     onCancel: () => void;
+    bare?: boolean;
   } = $props();
 
   /** 단계 한글 라벨. */
@@ -48,7 +51,7 @@
   }
 </script>
 
-<div class="progress">
+<div class="progress" class:bare>
   <div class="row">
     <span class="stage">{label}</span>
     <span class="pct">{pct}%</span>
@@ -86,6 +89,11 @@
     border-radius: 12px;
     background: var(--panel, #1b2029);
     color: var(--text, #e6e9ef);
+  }
+  /* 히어로 위에 얹을 때: 카드 제거(텍스트처럼). */
+  .progress.bare {
+    background: transparent;
+    padding: 4px 2px;
   }
   .row {
     display: flex;

@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MeetScribe 사용법</title>
+    <style>
+      :root {
+        --bg: #f5f1ec;
+        --card: #ffffff;
+        --ink: #23201c;
+        --muted: #6f675e;
+        --line: #e3dcd2;
+        --amber: #c8791f;
+        --amber-soft: #fbf1e2;
+        --blue: #2f6ad0;
+        --blue-soft: #ecf2fc;
+        --green: #2f8f5b;
+        --green-soft: #e9f6ee;
+        --red: #c0392b;
+        --red-soft: #fbecea;
+        --code-bg: #1e1a16;
+        --code-ink: #f3ead9;
+        --radius: 14px;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Malgun Gothic", -apple-system, "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif;
+        line-height: 1.7;
+        font-size: 16px;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px 80px; }
+
+      /* ── 헤더 ── */
+      header.hero {
+        background: radial-gradient(120% 140% at 70% 0%, #3a2a18 0%, #1f1813 55%, #140f0c 100%);
+        color: #f6efe6;
+        padding: 54px 20px 46px;
+        text-align: center;
+        border-bottom: 3px solid var(--amber);
+      }
+      header.hero .mark { font-size: 13px; letter-spacing: 0.18em; color: #e0a14a; font-weight: 700; }
+      header.hero h1 { margin: 8px 0 6px; font-size: 38px; letter-spacing: -0.02em; }
+      header.hero p { margin: 0; color: #cdbfae; font-size: 16px; }
+      header.hero .pills { margin-top: 18px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+      header.hero .pill {
+        font-size: 12.5px; padding: 4px 11px; border-radius: 999px;
+        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16); color: #e9ddcd;
+      }
+
+      /* ── 목차 ── */
+      nav.toc {
+        background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+        padding: 16px 22px; margin: 28px 0 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+      }
+      nav.toc b { display: block; font-size: 13px; color: var(--muted); margin-bottom: 8px; letter-spacing: 0.02em; }
+      nav.toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 28px; }
+      nav.toc li { margin: 3px 0; }
+      nav.toc a { color: var(--ink); text-decoration: none; }
+      nav.toc a:hover { color: var(--amber); text-decoration: underline; }
+
+      section { margin-top: 40px; }
+      h2 {
+        font-size: 23px; margin: 0 0 14px; padding-bottom: 8px; border-bottom: 2px solid var(--line);
+        letter-spacing: -0.01em;
+      }
+      h2 .n {
+        display: inline-block; width: 28px; height: 28px; line-height: 28px; text-align: center;
+        background: var(--amber); color: #fff; border-radius: 8px; font-size: 15px; margin-right: 10px; vertical-align: 2px;
+      }
+      h3 { font-size: 17px; margin: 22px 0 8px; }
+      p { margin: 10px 0; }
+      ul, ol.steps { margin: 10px 0; padding-left: 22px; }
+      li { margin: 6px 0; }
+      code {
+        background: #efe7db; color: #7a4d12; padding: 1px 6px; border-radius: 5px;
+        font-family: "Cascadia Code", Consolas, "D2Coding", monospace; font-size: 0.9em;
+      }
+      pre {
+        background: var(--code-bg); color: var(--code-ink); padding: 14px 16px; border-radius: 10px;
+        overflow-x: auto; font-family: "Cascadia Code", Consolas, "D2Coding", monospace; font-size: 13.5px; line-height: 1.5;
+      }
+      pre code { background: none; color: inherit; padding: 0; }
+
+      table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14.5px; }
+      th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+      th { background: #efe9e0; font-size: 13px; color: var(--muted); font-weight: 700; }
+      tbody tr:hover { background: #faf7f2; }
+      .tag-gated { color: var(--red); font-weight: 700; }
+      .tag-free { color: var(--green); font-weight: 700; }
+
+      /* ── 콜아웃 ── */
+      .callout { border-radius: 12px; padding: 14px 18px; margin: 18px 0; border-left: 5px solid; }
+      .callout p:first-child { margin-top: 0; }
+      .callout p:last-child { margin-bottom: 0; }
+      .callout .ttl { font-weight: 800; display: block; margin-bottom: 4px; }
+      .c-important { background: var(--amber-soft); border-color: var(--amber); }
+      .c-important .ttl { color: var(--amber); }
+      .c-info { background: var(--blue-soft); border-color: var(--blue); }
+      .c-info .ttl { color: var(--blue); }
+      .c-tip { background: var(--green-soft); border-color: var(--green); }
+      .c-tip .ttl { color: var(--green); }
+      .c-warn { background: var(--red-soft); border-color: var(--red); }
+      .c-warn .ttl { color: var(--red); }
+
+      ol.steps { counter-reset: s; list-style: none; padding-left: 0; }
+      ol.steps > li {
+        position: relative; padding: 4px 0 4px 42px; margin: 10px 0;
+      }
+      ol.steps > li::before {
+        counter-increment: s; content: counter(s);
+        position: absolute; left: 0; top: 3px; width: 28px; height: 28px; line-height: 28px;
+        text-align: center; background: var(--blue); color: #fff; border-radius: 50%; font-weight: 700; font-size: 14px;
+      }
+      a { color: var(--blue); }
+      footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; text-align: center; }
+      .kbd { font-size: 0.85em; }
+    </style>
+  </head>
+  <body>
+    <header class="hero">
+      <div class="mark">MEETSCRIBE · 사용법</div>
+      <h1>🎙️ MeetScribe 사용 안내서</h1>
+      <p>회의 녹음을 화자별로 분리해 회의록으로 — 모든 처리는 내 PC에서만</p>
+      <div class="pills">
+        <span class="pill">완전 로컬 · 오프라인</span>
+        <span class="pill">한국어 우선</span>
+        <span class="pill">자동 화자 분리</span>
+        <span class="pill">GPU 가속</span>
+      </div>
+    </header>
+
+    <div class="wrap">
+      <nav class="toc">
+        <b>목차</b>
+        <ol>
+          <li><a href="#about">MeetScribe란?</a></li>
+          <li><a href="#req">시스템 요구사항</a></li>
+          <li><a href="#hf">허깅페이스 모델 설정 (필수)</a></li>
+          <li><a href="#install">설치 &amp; 실행</a></li>
+          <li><a href="#usage">기본 사용법</a></li>
+          <li><a href="#export">내보내기 형식</a></li>
+          <li><a href="#trouble">문제 해결</a></li>
+          <li><a href="#privacy">개인정보 보호</a></li>
+        </ol>
+      </nav>
+
+      <!-- 1 -->
+      <section id="about">
+        <h2><span class="n">1</span>MeetScribe란?</h2>
+        <p>
+          회의 녹음 파일(오디오·영상)을 넣으면 <strong>음성을 텍스트로 옮기고(STT)</strong>,
+          <strong>누가 언제 말했는지 화자별로 나눈 뒤(화자 분리)</strong>, 화자별 색상 타임라인과
+          편집 가능한 회의록으로 보여 주는 <strong>완전 로컬</strong> 데스크탑 앱입니다.
+        </p>
+        <p>처리 흐름은 다음과 같습니다:</p>
+        <pre><code>오디오/영상 → 16kHz WAV 변환 → 음성 인식(STT) → 단어 정렬 → 화자 분리 → 병합 → 화자별 회의록</code></pre>
+        <div class="callout c-info">
+          <span class="ttl">ℹ️ 핵심</span>
+          <p>오디오와 전사 내용은 <strong>외부로 전송되지 않습니다.</strong> 인터넷은 <em>처음 모델을 받을 때 한 번만</em> 필요하고, 그 뒤로는 오프라인으로 동작합니다.</p>
+        </div>
+      </section>
+
+      <!-- 2 -->
+      <section id="req">
+        <h2><span class="n">2</span>시스템 요구사항</h2>
+        <table>
+          <thead><tr><th>항목</th><th>권장 / 필요</th></tr></thead>
+          <tbody>
+            <tr><td>운영체제</td><td>Windows 10 / 11 (64-bit)</td></tr>
+            <tr><td>GPU</td><td>NVIDIA, <strong>VRAM 8GB급 권장</strong>(예: RTX 3060 / 4060 이상) + 최신 드라이버 · CUDA. <br>GPU가 없어도 <strong>CPU로 동작은 하지만 매우 느립니다.</strong></td></tr>
+            <tr><td>ffmpeg</td><td><strong>필수</strong> — 오디오 전처리에 사용. 설치 후 시스템 <code>PATH</code>에 등록되어 있어야 합니다.</td></tr>
+            <tr><td>디스크</td><td>모델 캐시 약 <strong>4GB</strong> + 작업용 임시 공간</td></tr>
+            <tr><td>(개발 실행 시)</td><td>Python 3.12 · Node.js 18+ · Rust(Tauri 빌드)</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 3 ★ -->
+      <section id="hf">
+        <h2><span class="n">3</span>허깅페이스 모델 설정 <span style="font-size:14px;color:var(--red);">(필수)</span></h2>
+
+        <div class="callout c-important">
+          <span class="ttl">⭐ "다른 사람이 쓰려면 모델을 다시 받아야 하나요?" — 네, 그렇습니다.</span>
+          <p>
+            AI 모델은 <strong>앱에 포함되어 있지 않습니다.</strong> 용량이 크고(합쳐서 수 GB),
+            특히 화자 분리 모델(pyannote)은 <strong>gated 모델</strong>(약관 동의가 필요)이라
+            <strong>재배포가 불가능</strong>합니다. 그래서 <strong>각자의 PC에서 처음 실행할 때
+            자동으로 내려받아 로컬에 캐시</strong>합니다(이후 오프라인 동작). 즉 새 PC에서 쓰려면
+            그 PC에서 모델을 새로 받아야 합니다.
+          </p>
+          <p>
+            그리고 화자 분리(pyannote)는 <strong>각 사용자가 본인 HF 계정</strong>으로 약관에 동의하고
+            <strong>본인 토큰을 발급·등록</strong>해야 합니다(아래 3-2 절차). 보안상 <strong>남의 토큰을
+            공유해 쓰지 마세요.</strong> 정리하면 다른 사람이 쓸 때 필요한 1회 설정은
+            <strong>① 모델 다운로드(자동) · ② 본인 토큰 발급 · ③ 약관 동의 후 토큰 등록</strong> 입니다.
+          </p>
+        </div>
+
+        <h3>사용하는 모델</h3>
+        <table>
+          <thead><tr><th>모델</th><th>용도</th><th>받는 방식</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>faster-whisper large-v3</code></td>
+              <td>음성 인식(STT)</td>
+              <td><span class="tag-free">공개</span> · 첫 실행 시 자동(~3GB)</td>
+            </tr>
+            <tr>
+              <td><code>kresnik/wav2vec2-large-xlsr-korean</code></td>
+              <td>한국어 단어 정렬</td>
+              <td><span class="tag-free">공개</span> · 첫 실행 시 자동</td>
+            </tr>
+            <tr>
+              <td><code>pyannote/speaker-diarization-3.1</code><br><code>pyannote/segmentation-3.0</code></td>
+              <td>화자 분리</td>
+              <td><span class="tag-gated">gated</span> · <strong>HF 토큰 + 약관 동의 필요</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>화자 분리를 쓰려면 (한 번만 설정)</h3>
+        <ol class="steps">
+          <li><a href="https://huggingface.co/join" target="_blank" rel="noopener">huggingface.co</a> 에 가입합니다(무료).</li>
+          <li>
+            아래 <strong>두 모델 페이지</strong>에 들어가 약관에 동의(<em>Agree / Access repository</em>)합니다:
+            <ul>
+              <li><a href="https://huggingface.co/pyannote/speaker-diarization-3.1" target="_blank" rel="noopener">pyannote/speaker-diarization-3.1</a></li>
+              <li><a href="https://huggingface.co/pyannote/segmentation-3.0" target="_blank" rel="noopener">pyannote/segmentation-3.0</a></li>
+            </ul>
+          </li>
+          <li>
+            액세스 토큰을 만듭니다 — <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">설정 → Access Tokens</a> →
+            <em>New token</em>.
+            <div class="callout c-warn" style="margin:8px 0 0;">
+              <span class="ttl">반드시 classic <em>Read</em> 토큰</span>
+              <p>Fine-grained 토큰은 이 모델에서 동작하지 않습니다. 토큰 종류를 <strong>"Read"(classic)</strong>로 선택하세요.</p>
+            </div>
+          </li>
+          <li>
+            토큰을 <code>HF_TOKEN</code> 환경변수로 설정하고 앱을 다시 시작합니다. Windows에서:
+            <pre><code>setx HF_TOKEN "hf_여기에_본인_토큰"
+# 설정 후 터미널/앱을 새로 켜야 적용됩니다.</code></pre>
+          </li>
+        </ol>
+
+        <div class="callout c-info">
+          <span class="ttl">ℹ️ 토큰이 없으면?</span>
+          <p>음성 인식(STT)과 단어 정렬은 토큰 없이도 동작하지만, <strong>화자 분리는 비활성</strong>됩니다(앱 상단에 안내 배너가 뜹니다). 토큰은 코드나 채팅에 붙여넣지 말고 환경변수로만 두세요.</p>
+        </div>
+
+        <h3>모델 캐시 위치</h3>
+        <ul>
+          <li>STT · 단어 정렬: <code>~/.meetscribe/models</code> (환경변수 <code>MEETSCRIBE_CACHE</code>로 변경 가능)</li>
+          <li>화자 분리(pyannote): 허깅페이스 기본 캐시 <code>~/.cache/huggingface</code></li>
+        </ul>
+        <p>처음 한 번만 다운로드하며, 이후에는 인터넷 없이 동작합니다.</p>
+
+        <div class="callout c-info">
+          <span class="ttl">💻 다른 컴퓨터에서 쓸 때도 받아야 하나요? — 네</span>
+          <p>
+            캐시는 <strong>계정이 아니라 컴퓨터(로컬 폴더)에 저장</strong>됩니다. 같은 사람이라도
+            <strong>새 PC에서는 모델을 다시 받습니다.</strong> 단, 약관 동의·토큰은 본인 HF 계정에 묶여
+            있어 그대로 유효하므로 새 PC엔 <strong><code>HF_TOKEN</code>만 설정</strong>하면 됩니다(재동의 불필요).
+          </p>
+          <p>
+            다시 받기 싫으면 캐시 두 폴더(<code>~/.meetscribe/models</code> ·
+            <code>~/.cache/huggingface</code>)를 새 PC의 같은 위치로 <strong>복사</strong>하거나,
+            <code>MEETSCRIBE_CACHE</code>를 USB·공유 드라이브 같은 <strong>공용 위치</strong>로 지정하면
+            재다운로드를 건너뜁니다.
+          </p>
+        </div>
+      </section>
+
+      <!-- 4 -->
+      <section id="install">
+        <h2><span class="n">4</span>설치 &amp; 실행</h2>
+
+        <h3>지금(개발 실행)</h3>
+        <ol class="steps">
+          <li>저장소를 클론합니다.</li>
+          <li>
+            사이드카(Python) 환경을 만듭니다 — Python 3.12 가상환경에 사이드카 패키지와 의존성
+            (<strong>GPU용 PyTorch</strong>, WhisperX, pyannote.audio, faster-whisper 등)을 설치합니다.
+          </li>
+          <li>위 <a href="#hf">3장</a>대로 <code>HF_TOKEN</code>을 설정합니다.</li>
+          <li>프론트엔드 의존성: <pre><code>npm install</code></pre></li>
+          <li>개발용 사이드카 바이너리 준비: <pre><code>powershell scripts/setup-dev-sidecar.ps1</code></pre>(venv의 사이드카 실행파일을 <code>src-tauri/binaries/</code>로 복사)</li>
+          <li>실행: <pre><code>npm run tauri dev</code></pre>창이 뜨고, 사이드카(로컬 API)가 자동으로 기동합니다.</li>
+        </ol>
+
+        <h3>환경변수 요약</h3>
+        <table>
+          <thead><tr><th>변수</th><th>용도</th><th>필수</th></tr></thead>
+          <tbody>
+            <tr><td><code>HF_TOKEN</code></td><td>화자 분리(pyannote) 모델 접근</td><td>화자 분리에 <strong>필수</strong></td></tr>
+            <tr><td><code>MEETSCRIBE_CACHE</code></td><td>모델 캐시 폴더 변경</td><td>선택</td></tr>
+            <tr><td><code>MEETSCRIBE_DIARIZE_SUBPROCESS</code></td><td><code>1</code>이면 화자분리를 별도 프로세스로 — 2~3시간 장시간 회의의 메모리 부족(OOM) 방지</td><td>선택</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout c-tip">
+          <span class="ttl">💡 향후 배포 버전</span>
+          <p>PyInstaller로 사이드카를 동결하고 Tauri로 묶으면 <code>.msi</code> 설치 파일이 됩니다. 그때는 설치 후 <code>HF_TOKEN</code>만 설정하면 첫 실행 시 모델이 자동으로 받아집니다(Python·Node 설치 불필요).</p>
+        </div>
+      </section>
+
+      <!-- 5 -->
+      <section id="usage">
+        <h2><span class="n">5</span>기본 사용법</h2>
+        <ol class="steps">
+          <li>앱을 실행하면 <strong>마이크 화면</strong>이 나옵니다.</li>
+          <li>회의 파일을 창에 <strong>드래그&amp;드롭</strong>하거나, 마이크를 클릭해 파일을 고릅니다.<br>
+            <span class="muted">지원 형식: mp3 · m4a · wav · flac · ogg · mp4 · mov · mkv · webm</span></li>
+          <li>변환이 시작되면 <strong>진행바</strong>와 별 파동 애니메이션이 나타납니다(전처리 → 인식 → 정렬 → 화자 분리 → 병합).
+            중간에 <strong>취소</strong> 버튼으로 멈출 수 있습니다(약 10초 안에 중단).</li>
+          <li>완료되면 <strong>화자별 색상 타임라인 회의록</strong>과 <strong>화자 패널</strong>이 표시됩니다.</li>
+          <li><strong>화자 편집</strong>: 화자 패널에서 이름 바꾸기 · 병합 · 색상 변경.</li>
+          <li><strong>내보내기</strong>: 원하는 형식(TXT · SRT · DOCX · JSON)을 누르고 저장 위치를 고릅니다.</li>
+        </ol>
+        <div class="callout c-tip">
+          <span class="ttl">💡 처리 속도</span>
+          <p>VRAM 8GB급 GPU 기준 <strong>1시간 회의 ≈ 5~10분</strong>. CPU만 쓰면 훨씬 오래 걸립니다. 첫 실행은 모델 다운로드 때문에 추가 시간이 듭니다(한 번만).</p>
+        </div>
+      </section>
+
+      <!-- 6 -->
+      <section id="export">
+        <h2><span class="n">6</span>내보내기 형식</h2>
+        <table>
+          <thead><tr><th>형식</th><th>설명 · 용도</th></tr></thead>
+          <tbody>
+            <tr><td><code>TXT</code></td><td>순수 텍스트 회의록 — 화자별 발화 모음</td></tr>
+            <tr><td><code>SRT</code></td><td>타임코드 자막 — 영상 자막·구간 확인용</td></tr>
+            <tr><td><code>DOCX</code></td><td>워드 문서 회의록 — 배포·인쇄용</td></tr>
+            <tr><td><code>JSON</code></td><td>원자료(세그먼트·화자·타임스탬프) — 재가공·연동용</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 7 -->
+      <section id="trouble">
+        <h2><span class="n">7</span>문제 해결</h2>
+        <table>
+          <thead><tr><th>증상</th><th>해결</th></tr></thead>
+          <tbody>
+            <tr><td>화자 분리가 안 됨 / "HF 토큰" 배너</td><td><a href="#hf">3장</a> 확인 — 두 모델 약관 동의 + <strong>classic Read</strong> 토큰 + <code>HF_TOKEN</code> 설정 후 앱 재시작</td></tr>
+            <tr><td>"GPU(CUDA) 미감지" 배너</td><td>NVIDIA 드라이버·CUDA 확인. 없으면 CPU로 동작(느림)</td></tr>
+            <tr><td>"ffmpeg를 찾을 수 없습니다"</td><td>ffmpeg 설치 후 시스템 <code>PATH</code>에 등록</td></tr>
+            <tr><td>2~3시간 회의에서 메모리 부족</td><td><code>MEETSCRIBE_DIARIZE_SUBPROCESS=1</code> 설정 후 재시작</td></tr>
+            <tr><td>취소가 즉시 안 됨</td><td>현재 인식 구간 처리가 끝나는 지점(약 10초)에서 멈춥니다 — 정상</td></tr>
+            <tr><td>첫 실행이 오래 걸림</td><td>모델 다운로드 중(수 GB). 처음 한 번만</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 8 -->
+      <section id="privacy">
+        <h2><span class="n">8</span>개인정보 보호</h2>
+        <div class="callout c-info">
+          <span class="ttl">🔒 완전 로컬 처리</span>
+          <p>모든 음성 인식·화자 분리·내보내기는 <strong>내 PC 안에서만</strong> 이뤄집니다. 오디오 파일과 전사 내용은 외부 서버로 전송되지 않습니다. 인터넷은 <strong>처음 모델을 받을 때만</strong> 사용합니다.</p>
+        </div>
+      </section>
+
+      <footer>
+        MeetScribe · 완전 로컬 회의록 데스크탑 앱 · 한국어 우선<br />
+        본 문서 기준: 2026년 6월
+      </footer>
+    </div>
+  </body>
+</html>

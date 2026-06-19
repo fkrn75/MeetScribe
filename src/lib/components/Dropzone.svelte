@@ -1,12 +1,11 @@
 <script lang="ts">
   /**
-   * 드롭존 — 오디오 파일을 드래그&드롭하거나 클릭해서 선택한다.
-   *
-   * 파일은 같은 PC에 있으므로 **로컬 경로만** 상위로 전달한다(업로드 X, 설계서 3.3).
-   * - Tauri 환경: OS 드래그&드롭 이벤트로 절대경로를 얻거나, 다이얼로그로 선택.
-   * - 일반 브라우저(개발/프리뷰): File 객체엔 절대경로가 없으므로 안내만 표시.
+   * 드롭존 — 오디오 파일을 드래그&드롭하거나 마이크를 클릭해서 선택한다.
+   * 비주얼은 Hero(나무 마이크 + 별파형 아우라)를 쓰고, 이 래퍼가 드롭/클릭을 처리한다.
+   * 파일은 같은 PC에 있으므로 로컬 경로만 상위로 전달(업로드 X, 설계서 3.3).
    */
   import { onMount, onDestroy } from "svelte";
+  import Hero from "./Hero.svelte";
 
   // 부모가 넘기는 콜백: 선택된 절대경로를 전달.
   let { onPick, disabled = false }: { onPick: (path: string) => void; disabled?: boolean } =
@@ -83,17 +82,17 @@
     e.preventDefault();
     dragOver = false;
     if (isTauri()) return; // 경로는 Tauri 이벤트가 처리
-    // 웹: File.path가 없으므로 안내.
     hint = "브라우저에서는 파일 경로를 얻을 수 없습니다. 데스크탑 앱을 사용하세요.";
   }
 </script>
 
 <div
-  class="dropzone"
+  class="dz"
   class:drag={dragOver}
   class:disabled
   role="button"
   tabindex="0"
+  aria-label="회의 녹음 파일 선택"
   ondragenter={onDragEnter}
   ondragover={onDragEnter}
   ondragleave={onDragLeave}
@@ -101,51 +100,46 @@
   onclick={pickViaDialog}
   onkeydown={(e) => (e.key === "Enter" || e.key === " ") && pickViaDialog()}
 >
-  <div class="icon">🎙️</div>
-  <div class="title">회의 녹음 파일을 여기에 드롭</div>
-  <div class="sub">또는 클릭해서 선택 · {ACCEPT.slice(0, 5).join(", ")} 등</div>
-  {#if hint}
-    <div class="hint">{hint}</div>
-  {/if}
+  <Hero>
+    <div class="title">회의 녹음 파일을 이 위치에 드롭해 주세요</div>
+    <div class="sub">또는 아이콘을 클릭해서 시작 — {ACCEPT.slice(0, 5).join(", ")} 등</div>
+    {#if hint}
+      <div class="hint">{hint}</div>
+    {/if}
+  </Hero>
 </div>
 
 <style>
-  .dropzone {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 48px 24px;
-    border: 2px dashed var(--border, #3a4150);
-    border-radius: 14px;
-    background: var(--panel, #1b2029);
-    color: var(--text, #e6e9ef);
+  .dz {
+    border-radius: 18px;
+    padding: 10px 16px;
     cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
     user-select: none;
+    transition:
+      box-shadow 0.18s,
+      background 0.18s;
   }
-  .dropzone.drag {
-    border-color: var(--accent, #3b6fd4);
-    background: var(--panel-hover, #222a36);
+  .dz.drag {
+    background: color-mix(in srgb, var(--accent, #3b6fd4) 10%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent, #3b6fd4) 55%, transparent);
   }
-  .dropzone.disabled {
+  .dz.disabled {
     opacity: 0.5;
     pointer-events: none;
   }
-  .icon {
-    font-size: 40px;
-  }
   .title {
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text, #e6e9ef);
   }
   .sub {
-    font-size: 12.5px;
+    margin-top: 8px;
+    font-size: 14px;
     color: var(--muted, #9aa3ad);
   }
   .hint {
-    margin-top: 6px;
+    margin-top: 8px;
     font-size: 12px;
     color: var(--warn, #e0a14a);
   }
