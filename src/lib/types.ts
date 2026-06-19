@@ -163,6 +163,19 @@ export interface SystemInfo {
   ffmpeg_available: boolean;
 }
 
+/**
+ * GET /runtime 응답 — torch 온디맨드 런타임 상태. runtime_torch.state()
+ * torch 는 인스톨러 축소를 위해 동결본에서 제외돼 첫 실행 시 캐시로 받는다.
+ */
+export interface RuntimeState {
+  stage: "idle" | "downloading" | "extracting" | "ready" | "error";
+  downloaded: number; // 누적 바이트
+  total: number; // 전체 바이트(휠 합)
+  message: string;
+  torch_ready: boolean;
+  progress: number; // 0~1
+}
+
 /** POST /jobs/{id}/export 요청. schemas.ExportRequest */
 export interface ExportRequest {
   format: ExportFormat;

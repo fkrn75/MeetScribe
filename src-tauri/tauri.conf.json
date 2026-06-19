@@ -38,6 +38,9 @@
     ],
     "externalBin": [
       "binaries/meetscribe-sidecar"
-    ]
+    ],
+    "resources": {
+      "resources/": ""
+    }
   }
 }

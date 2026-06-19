@@ -16,6 +16,8 @@
     cancelJob,
     getJob,
     getSystem,
+    getRuntime,
+    installRuntime,
     subscribeProgress,
     ApiError,
   } from "./lib/api";
@@ -26,7 +28,7 @@
     transcript,
     type JobState,
   } from "./lib/stores";
-  import type { ProgressEvent, SystemInfo } from "./lib/types";
+  import type { ProgressEvent, RuntimeState, SystemInfo } from "./lib/types";
 
   import Dropzone from "./lib/components/Dropzone.svelte";
   import Hero from "./lib/components/Hero.svelte";
@@ -50,6 +52,13 @@
   // 시스템 정보(GPU/ffmpeg 경고 배너용).
   let system = $state<SystemInfo | null>(null);
 
+  // torch 온디맨드 런타임 상태(첫 실행 다운로드 게이트).
+  // torch 는 인스톨러 축소를 위해 동결본에서 제외됐다 → 첫 실행 시 캐시로 받는다.
+  let runtime = $state<RuntimeState | null>(null);
+  let runtimePolling = false;
+  // 사이드카 응답을 받았는데 torch 가 아직 없으면 설치 게이트(모달)를 띄운다.
+  let needRuntime = $derived(runtime !== null && !runtime.torch_ready);
+
   // 활성 SSE 핸들. 정리용으로 보관.
   let es: EventSource | null = null;
 
@@ -61,6 +70,7 @@
   // 시작 시 시스템 점검(GPU/ffmpeg/HF토큰 경고용). 실패해도 치명적이지 않음. 1회만.
   onMount(() => {
     void loadSystem();
+    void checkRuntime();
   });
 
   async function loadSystem() {
@@ -69,6 +79,47 @@
     } catch {
       system = null; // 사이드카 미기동 등 — 배너 생략
     }
+  }
+
+  /** torch 온디맨드 상태 확인. 미준비면 게이트(모달)가 뜬다. */
+  async function checkRuntime() {
+    try {
+      runtime = await getRuntime();
+      // 앱 재시작 시 이미 다운로드가 진행 중이면 폴링을 이어간다.
+      if (runtime && !runtime.torch_ready && runtime.stage === "downloading") {
+        pollRuntime();
+      }
+    } catch {
+      runtime = null; // 사이드카 미기동 — health/배너로 커버, 게이트 생략
+    }
+  }
+
+  /** torch 휠(약 3.2GB) 다운로드 시작 → 진행률 폴링. */
+  async function startRuntimeInstall() {
+    try {
+      runtime = await installRuntime();
+      pollRuntime();
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e);
+      if (runtime) runtime = { ...runtime, stage: "error", message: msg };
+    }
+  }
+
+  /** ready/error 도달까지 1.5초 간격으로 /runtime 폴링. */
+  function pollRuntime() {
+    if (runtimePolling) return;
+    runtimePolling = true;
+    const timer = setInterval(async () => {
+      try {
+        runtime = await getRuntime();
+        if (runtime.torch_ready || runtime.stage === "ready" || runtime.stage === "error") {
+          clearInterval(timer);
+          runtimePolling = false;
+        }
+      } catch {
+        // 일시 실패는 무시(다음 틱에 재시도)
+      }
+    }, 1500);
   }
 
   /** 파일 선택됨 → 작업 생성·진행 구독. */
@@ -267,6 +318,37 @@
   </section>
 </main>
 
+<!-- torch 온디맨드 설치 게이트: 동결본에 torch 가 없을 때 첫 실행 1회 다운로드를 유도한다. -->
+{#if needRuntime && runtime}
+  <div class="rt-overlay">
+    <div class="rt-modal">
+      <div class="rt-icon">🎙️</div>
+      <div class="rt-title">음성 엔진 설치 (최초 1회)</div>
+      <div class="rt-desc">
+        화자 분리·정렬을 위해 음성 엔진(PyTorch, 약 3.2GB)을 한 번만 내려받습니다.
+        받은 파일은 다음 실행부터 재사용되며, 음성 파일은 항상 이 PC에서만 처리됩니다.
+      </div>
+
+      {#if runtime.stage === "idle" || runtime.stage === "error"}
+        {#if runtime.stage === "error"}
+          <div class="rt-err">설치 실패: {runtime.message}</div>
+        {/if}
+        <button class="rt-btn" onclick={startRuntimeInstall}>다운로드 시작 (약 3.2GB)</button>
+      {:else}
+        <div class="rt-prog">
+          <div class="rt-track">
+            <div class="rt-fill" style="width:{Math.round(runtime.progress * 100)}%"></div>
+          </div>
+          <div class="rt-stat">
+            {runtime.message} — {(runtime.downloaded / 1e9).toFixed(2)} / {(runtime.total / 1e9).toFixed(2)} GB
+            ({Math.round(runtime.progress * 100)}%)
+          </div>
+        </div>
+      {/if}
+    </div>
+  </div>
+{/if}
+
 <style>
   .app {
     display: flex;
@@ -408,5 +490,82 @@
     color: #fff;
     cursor: pointer;
     font-size: 13px;
+  }
+
+  /* ── torch 온디맨드 설치 게이트(오버레이) ── */
+  .rt-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(2px);
+  }
+  .rt-modal {
+    width: min(460px, 90vw);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 26px;
+    border-radius: 16px;
+    background: var(--panel, #1b2029);
+    border: 1px solid #2d231b;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+    text-align: center;
+  }
+  .rt-icon {
+    font-size: 34px;
+  }
+  .rt-title {
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--text, #e6e9ef);
+  }
+  .rt-desc {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--muted, #9aa3ad);
+  }
+  .rt-btn {
+    margin-top: 6px;
+    padding: 11px 18px;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent, #3b6fd4);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .rt-btn:hover {
+    filter: brightness(1.08);
+  }
+  .rt-err {
+    font-size: 12.5px;
+    color: var(--danger, #d4456f);
+  }
+  .rt-prog {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .rt-track {
+    height: 10px;
+    border-radius: 999px;
+    background: #2a3340;
+    overflow: hidden;
+  }
+  .rt-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #3b6fd4, #5b8df0);
+    transition: width 0.3s ease;
+  }
+  .rt-stat {
+    font-size: 12px;
+    color: var(--muted, #9aa3ad);
   }
 </style>

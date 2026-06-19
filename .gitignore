@@ -36,6 +36,8 @@ build/
 *.msi
 *.exe
 *.app
+# 동결 사이드카 onedir 번들(_internal ~수GB) — 스테이징으로 재생성하므로 비동봉
+src-tauri/resources/_internal/
 
 # === 오디오·영상 샘플, 프로젝트 결과물 (개인정보·대용량) ===
 *.wav

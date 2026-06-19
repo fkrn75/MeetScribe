@@ -10,6 +10,7 @@ import type {
   HealthInfo,
   JobInfo,
   ProgressEvent,
+  RuntimeState,
   SystemInfo,
   TranscribeRequest,
 } from "./types";
@@ -100,6 +101,18 @@ export function getHealth(): Promise<HealthInfo> {
 /** GET /system — GPU/디바이스/모델/ffmpeg 가용성. */
 export function getSystem(): Promise<SystemInfo> {
   return request<SystemInfo>("/system", { method: "GET" });
+}
+
+/** GET /runtime — torch 온디맨드 상태(첫 실행 다운로드 게이트용). */
+export function getRuntime(): Promise<RuntimeState> {
+  return request<RuntimeState>("/runtime", { method: "GET" });
+}
+
+/** POST /runtime/install — torch 휠(약 3.2GB) 다운로드 시작(멱등). 진행은 getRuntime 폴링. */
+export function installRuntime(): Promise<RuntimeState & { started: boolean }> {
+  return request<RuntimeState & { started: boolean }>("/runtime/install", {
+    method: "POST",
+  });
 }
 
 /** POST /jobs — 작업 생성. 파일은 경로만 전달(업로드 X). */

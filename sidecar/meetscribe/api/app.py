@@ -171,6 +171,25 @@ def create_app() -> FastAPI:
 
         return {"out_path": out_path}
 
+    # ── GET /runtime (torch 온디맨드 상태) ─────────────────────
+    @app.get("/runtime")
+    async def runtime_status() -> dict[str, Any]:
+        """torch 온디맨드 런타임 상태. 프론트가 폴링해 첫 실행 설치 모달을 띄운다.
+        torch 는 동결본에 없으므로(인스톨러 축소), 캐시에 받기 전엔 정렬/화자분리가 막힌다.
+        STT(faster-whisper/ctranslate2)는 torch 없이도 동작한다."""
+        from .. import runtime_torch
+
+        return runtime_torch.state()
+
+    # ── POST /runtime/install (torch 휠 다운로드 시작) ─────────
+    @app.post("/runtime/install", status_code=status.HTTP_202_ACCEPTED)
+    async def runtime_install() -> dict[str, Any]:
+        """torch 휠(약 3.2GB) 다운로드를 백그라운드로 시작(멱등). 진행은 /runtime 폴링."""
+        from .. import runtime_torch
+
+        started = runtime_torch.start_install()
+        return {"started": started, **runtime_torch.state()}
+
     return app
 
 
