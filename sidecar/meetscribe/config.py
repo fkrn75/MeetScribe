@@ -98,6 +98,14 @@ class AppConfig:
         in ("1", "true", "yes")
     )
 
+    # 화자분리 모델. community-1(pyannote 4.0)은 임베딩 개선으로 짧은 발화 화자 구분이
+    # 정확하고 파라미터에 안정적(클러스터링 튜닝 불필요 — 실측 확인)이라 기본값.
+    # 회귀가 필요하면 환경변수 MEETSCRIBE_DIARIZE_MODEL=pyannote/speaker-diarization-3.1.
+    diarization_model: str = field(
+        default_factory=lambda: os.environ.get("MEETSCRIBE_DIARIZE_MODEL")
+        or "pyannote/speaker-diarization-community-1"
+    )
+
     # pyannote는 gated 모델 → HF 토큰 필요(약관 동의용, 무료).
     hf_token: Optional[str] = field(default_factory=lambda: os.environ.get("HF_TOKEN"))
 
