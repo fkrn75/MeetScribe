@@ -175,7 +175,7 @@
             <tr><td>운영체제</td><td>Windows 10 / 11 (64-bit)</td></tr>
             <tr><td>GPU</td><td>NVIDIA, <strong>VRAM 8GB급 권장</strong>(예: RTX 3060 / 4060 이상) + 최신 드라이버 · CUDA. <br>GPU가 없어도 <strong>CPU로 동작은 하지만 매우 느립니다.</strong></td></tr>
             <tr><td>ffmpeg</td><td><strong>필수</strong> — 오디오 전처리에 사용. 설치 후 시스템 <code>PATH</code>에 등록되어 있어야 합니다.</td></tr>
-            <tr><td>디스크</td><td>모델 캐시 약 <strong>4GB</strong> + 작업용 임시 공간</td></tr>
+            <tr><td>디스크</td><td>음성 엔진(PyTorch) 약 <strong>7GB</strong> + 모델 캐시 약 <strong>4GB</strong> + 작업용 임시 공간 (첫 실행 시 한 번 받음)</td></tr>
             <tr><td>(개발 실행 시)</td><td>Python 3.12 · Node.js 18+ · Rust(Tauri 빌드)</td></tr>
           </tbody>
         </table>
@@ -304,9 +304,20 @@
           </tbody>
         </table>
 
+        <h3>설치 버전 (인스톨러)</h3>
+        <p>
+          <code>npm run tauri build -- --bundles nsis</code> 로 <strong>약 200MB 설치 파일</strong>
+          (<code>MeetScribe_…_x64-setup.exe</code>)을 만듭니다. 받는 사람은
+          <strong>Python·Node·Rust 없이</strong> 설치 파일만 실행하면 됩니다.
+        </p>
         <div class="callout c-tip">
-          <span class="ttl">💡 향후 배포 버전</span>
-          <p>PyInstaller로 사이드카를 동결하고 Tauri로 묶으면 <code>.msi</code> 설치 파일이 됩니다. 그때는 설치 후 <code>HF_TOKEN</code>만 설정하면 첫 실행 시 모델이 자동으로 받아집니다(Python·Node 설치 불필요).</p>
+          <span class="ttl">💡 첫 실행 시 한 번만 — 음성 엔진 다운로드</span>
+          <p>
+            설치 파일을 작게 유지하려고 <strong>음성 엔진(PyTorch, 약 3.2GB)은 앱에 넣지 않습니다.</strong>
+            설치 후 처음 실행하면 <strong>"음성 엔진 설치" 안내창</strong>이 떠서 한 번만 내려받습니다(이후 재사용).
+            이어서 <a href="#hf">3장</a>의 <code>HF_TOKEN</code>을 설정하면 회의록 모델도 자동으로 받아집니다.
+            음성 엔진·모델 모두 <strong>각 PC에서 처음 한 번만</strong> 받으면 그 뒤로는 오프라인으로 동작합니다.
+          </p>
         </div>
       </section>
 
@@ -325,7 +336,7 @@
         </ol>
         <div class="callout c-tip">
           <span class="ttl">💡 처리 속도</span>
-          <p>VRAM 8GB급 GPU 기준 <strong>1시간 회의 ≈ 5~10분</strong>. CPU만 쓰면 훨씬 오래 걸립니다. 첫 실행은 모델 다운로드 때문에 추가 시간이 듭니다(한 번만).</p>
+          <p>VRAM 8GB급 GPU 기준 <strong>1시간 회의 ≈ 5~10분</strong>. CPU만 쓰면 훨씬 오래 걸립니다. 첫 실행은 음성 엔진(약 3.2GB)과 모델 다운로드 때문에 추가 시간이 듭니다(한 번만).</p>
         </div>
       </section>
 
@@ -354,7 +365,7 @@
             <tr><td>"ffmpeg를 찾을 수 없습니다"</td><td>ffmpeg 설치 후 시스템 <code>PATH</code>에 등록</td></tr>
             <tr><td>2~3시간 회의에서 메모리 부족</td><td><code>MEETSCRIBE_DIARIZE_SUBPROCESS=1</code> 설정 후 재시작</td></tr>
             <tr><td>취소가 즉시 안 됨</td><td>현재 인식 구간 처리가 끝나는 지점(약 10초)에서 멈춥니다 — 정상</td></tr>
-            <tr><td>첫 실행이 오래 걸림</td><td>모델 다운로드 중(수 GB). 처음 한 번만</td></tr>
+            <tr><td>첫 실행이 오래 걸림</td><td>음성 엔진(약 3.2GB)·모델 다운로드 중. 처음 한 번만</td></tr>
           </tbody>
         </table>
       </section>
