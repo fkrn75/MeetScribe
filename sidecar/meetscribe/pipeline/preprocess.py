@@ -61,6 +61,12 @@ def to_wav(src_path: str, dst_path: str | None = None) -> str:
         "-i",
         src_path,
         "-vn",
+        # 화자분리 정확도 향상 필터(quality 트랙 ROI 1위):
+        #  highpass=80 — 룸 노이즈·저주파 진동 제거(VAD 과분할 감소),
+        #  loudnorm(EBU R128) — 마이크 거리 편차로 인한 화자별 음량차를 균등화
+        #  (음량 낮은 화자의 임베딩이 묻혀 클러스터링이 왜곡되는 것 방지).
+        "-af",
+        "highpass=f=80,loudnorm=I=-16:TP=-1.5:LRA=11",
         "-ac",
         str(TARGET_CHANNELS),
         "-ar",

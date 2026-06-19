@@ -28,7 +28,7 @@
     transcript,
     type JobState,
   } from "./lib/stores";
-  import type { ProgressEvent, RuntimeState, SystemInfo } from "./lib/types";
+  import type { ProgressEvent, RuntimeState, SystemInfo, TranscribeRequest } from "./lib/types";
 
   import Dropzone from "./lib/components/Dropzone.svelte";
   import Hero from "./lib/components/Hero.svelte";
@@ -47,6 +47,9 @@
 
   // 선택된 파일 경로(표시용).
   let pickedPath = $state<string>("");
+  // 예상 참석자 수(선택). 입력하면 화자 분리에 "정확히 N명"으로 힌트를 준다(min=max=N).
+  // 비우면 pyannote 가 자동 감지. 회의는 인원이 명확한 경우가 많아 정확도를 크게 끌어올린다.
+  let expectedSpeakers = $state<number | null>(null);
   // 취소 진행 플래그.
   let cancelling = $state(false);
   // 시스템 정보(GPU/ffmpeg 경고 배너용).
@@ -71,6 +74,13 @@
   onMount(() => {
     void loadSystem();
     void checkRuntime();
+    // 멈춤 복구: 작업을 시작했는데(jobId 존재) 아직 완료 화면이 아니면 결과를 재회수한다.
+    // 처리는 끝났는데 완료 통지를 놓쳐 처리 화면에 멈춘 경우(또는 개발 중 HMR 재마운트)의
+    // 안전망 — 사이드카 메모리에 결과가 남아 있으면 재처리 없이 그대로 살려낸다.
+    if (jobState.jobId && jobState.status !== "done") {
+      view = "processing";
+      void pollUntilResult(jobState.jobId);
+    }
   });
 
   async function loadSystem() {
@@ -131,7 +141,13 @@
     cancelling = false;
 
     try {
-      const { job_id } = await createJob({ audio_path: path });
+      // 참석자 수를 알면 화자 분리 정확도를 위해 정확히 그 수로 고정한다(min=max=N).
+      const req: TranscribeRequest = { audio_path: path };
+      if (expectedSpeakers && expectedSpeakers > 0) {
+        req.min_speakers = expectedSpeakers;
+        req.max_speakers = expectedSpeakers;
+      }
+      const { job_id } = await createJob(req);
       job.update((j) => ({ ...j, jobId: job_id, status: "running" }));
       startProgress(job_id);
     } catch (e) {
@@ -182,8 +198,8 @@
         job.update((j) => ({ ...j, status: "failed", error: info.error }));
         view = "error";
       } else {
-        // 결과 미도착 — 한 번 더 폴링 여지.
-        void pollOnce(jobId);
+        // 결과 미도착(완료 통지와 result 저장 사이의 레이스) — 짧게 재시도해 회수.
+        void pollUntilResult(jobId);
       }
     } catch (e) {
       failWith(e, "결과를 불러오지 못했습니다");
@@ -206,6 +222,40 @@
     } catch {
       // 폴링 실패는 조용히 무시(재연결 대기).
     }
+  }
+
+  /**
+   * 완료 통지를 받았는데 result 가 아직이면 짧은 간격으로 끈질기게 회수한다.
+   *
+   * 백엔드는 완료 신호(done)를 result 저장 직후에 보내지만, 만일의 레이스(완료 통지가
+   * result 보다 먼저 도달)에도 화면이 멈추지 않도록 하는 안전망이다. 0.4초 간격으로
+   * 최대 15회(약 6초) 재시도하며, 그 안에 result 가 오면 결과 화면으로 전환한다.
+   */
+  async function pollUntilResult(jobId: string, attempts = 15) {
+    for (let i = 0; i < attempts; i++) {
+      await new Promise((r) => setTimeout(r, 400));
+      try {
+        const info = await getJob(jobId);
+        if (info.result) {
+          setTranscript(info.result);
+          job.update((j) => ({ ...j, status: "done", stage: "done", percent: 100 }));
+          view = "done";
+          return;
+        }
+        if (info.status === "failed") {
+          job.update((j) => ({ ...j, status: "failed", error: info.error ?? "처리 실패" }));
+          view = "error";
+          return;
+        }
+      } catch {
+        // 일시적 조회 실패는 무시하고 다음 시도.
+      }
+    }
+    // 끝내 결과를 못 받음(매우 드묾) — 멈춘 채로 두지 말고 명확히 안내한다.
+    failWith(
+      new Error("처리는 완료됐지만 결과를 받지 못했습니다. '새 파일'로 다시 시도해 주세요."),
+      "결과 수신 실패",
+    );
   }
 
   /** 취소 버튼. */
@@ -274,7 +324,22 @@
   <section class="content">
     {#if view === "idle"}
       <div class="center">
-        <Dropzone onPick={onPick} />
+        <div class="idle-stack">
+          <Dropzone onPick={onPick} />
+          <div class="opt">
+            <label class="opt-label" for="spk">예상 참석자 수</label>
+            <input
+              id="spk"
+              class="opt-input"
+              type="number"
+              min="1"
+              max="30"
+              bind:value={expectedSpeakers}
+              placeholder="자동"
+            />
+            <span class="opt-hint">알면 입력하세요 — 화자 분리가 더 정확해집니다 (비우면 자동 감지)</span>
+          </div>
+        </div>
       </div>
     {:else if view === "processing"}
       <div class="center">
@@ -432,6 +497,49 @@
   }
   .center.narrow > :global(*) {
     width: min(560px, 100%);
+  }
+
+  /* idle: 드롭존 + 참석자 수 옵션 */
+  .idle-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    width: min(560px, 100%);
+  }
+  .opt {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--panel, #1b2029);
+    border: 1px solid #2d231b;
+  }
+  .opt-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text, #e6e9ef);
+  }
+  .opt-input {
+    width: 84px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border, #3a4150);
+    background: #141a22;
+    color: var(--text, #e6e9ef);
+    font-size: 14px;
+  }
+  .opt-input:focus {
+    outline: none;
+    border-color: var(--accent, #3b6fd4);
+  }
+  .opt-hint {
+    flex: 1 1 100%;
+    font-size: 12px;
+    color: var(--muted, #9aa3ad);
   }
   .pbar {
     width: min(460px, 82vw);

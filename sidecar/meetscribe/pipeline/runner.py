@@ -154,8 +154,11 @@ def run_pipeline(
             len(segments),
             len(speakers),
         )
-        if progress:
-            progress(JobStage.DONE, 1.0, "완료")
+        # NOTE: DONE 전이는 JobManager._finish_done 이 result 를 저장한 뒤 emit 한다.
+        # 여기서 progress(DONE)을 쏘면 result 가 저장되기 전에 프론트가 완료를 통지받아,
+        # 곧장 GET /jobs/{id} 를 호출했을 때 result=None 을 받는 레이스가 생긴다(특히 긴
+        # 회의는 반환 직후 임시 WAV 정리 finally 에 시간이 걸려 창이 더 벌어진다).
+        # → 마지막 단계 진행률은 MERGE 100% 로 충분하고, 완료 신호는 JobManager 가 보낸다.
         return result
 
     finally:

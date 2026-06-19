@@ -76,8 +76,12 @@ def diarize(
             return _merge_adjacent(turns)
 
         # 긴 오디오: 청크별 처리 후 라벨 정합.
+        # 주의: min_speakers 를 각 청크에 그대로 주면, 그 구간에 실제로 말한 사람이
+        # 적어도 억지로 그 수만큼 쪼개 과분할이 된다(예: 5명 회의의 10분 구간에 2명만
+        # 말했는데 5명으로 분리). 청크 경로에선 상한(max)만 적용하고 하한은 풀어 둔다.
+        # (단일 청크 경로에서는 min/max 를 모두 그대로 적용해 인원을 정확히 고정한다.)
         turns = _diarize_chunked(
-            pipeline, wav_path, duration, chunk_sec, min_speakers, max_speakers, progress, should_cancel
+            pipeline, wav_path, duration, chunk_sec, None, max_speakers, progress, should_cancel
         )
         if progress:
             progress(JobStage.DIARIZE, 1.0, f"화자분리 완료({_count_speakers(turns)}명)")
@@ -99,8 +103,46 @@ def _load_pipeline(cfg: AppConfig):
             f"pyannote 파이프라인 로드 실패: {_PIPELINE_ID} "
             "(토큰 권한 또는 약관 동의를 확인하세요)."
         )
+    _apply_clustering_threshold(pipeline, cfg)
     pipeline.to(torch.device(cfg.torch_device))
     return pipeline
+
+
+def _apply_clustering_threshold(pipeline, cfg: AppConfig) -> None:
+    """화자분리 하이퍼파라미터(clustering.threshold·segmentation.min_duration_off)를 재정의한다.
+
+    pyannote 3.1 SpeakerDiarization 의 구조를 가정한다. 모델 교체로 구조가 달라지면
+    조용히 건너뛴다(튜닝 실패는 치명적이지 않음 — 기본값으로 동작).
+    - clustering.threshold: ↑ 화자 병합 / ↓ 분할(참석자 수 지정 시 영향 거의 사라짐).
+    - segmentation.min_duration_off: 화자 전환으로 볼 최소 침묵. ↑ 하면 짧은 침묵(기침·
+      호흡)으로 인한 과분할을 억제한다.
+    둘 다 기본값(threshold 없음 + min_duration_off 0)이면 파이프라인을 손대지 않는다(회귀 안전).
+    """
+    threshold = cfg.clustering_threshold
+    min_dur_off = float(getattr(cfg, "min_duration_off", 0.0) or 0.0)
+    if threshold is None and min_dur_off <= 0.0:
+        return
+    try:
+        # 전체 dict 를 요구하므로, 지정 안 한 값은 3.1 기본값으로 채워 함께 전달한다.
+        pipeline.instantiate(
+            {
+                "clustering": {
+                    "method": "centroid",
+                    "min_cluster_size": 12,
+                    "threshold": float(threshold) if threshold is not None else 0.7045654963945799,
+                },
+                "segmentation": {
+                    "min_duration_off": min_dur_off,
+                },
+            }
+        )
+        logger.info(
+            "화자분리 파라미터 재정의: threshold=%s, min_duration_off=%.2f",
+            f"{threshold:.4f}" if threshold is not None else "기본",
+            min_dur_off,
+        )
+    except Exception as e:  # noqa: BLE001 — 기본값 유지하고 계속(치명적이지 않음)
+        logger.warning("화자분리 파라미터 적용 실패 — 기본값으로 진행: %s", e)
 
 
 def _diarize_window(
