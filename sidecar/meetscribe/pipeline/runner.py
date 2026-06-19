@@ -181,7 +181,7 @@ def _stage_transcribe(
         return cached.segments, cached.language
 
     try:
-        segments, language = transcribe_mod.transcribe(wav_path, cfg, progress)
+        segments, language = transcribe_mod.transcribe(wav_path, cfg, progress, should_cancel)
     finally:
         # ④ 단계 종료 후 GPU 메모리 회수(sequential_load 시 다음 단계 적재 공간 확보).
         _release_memory(cfg)
@@ -207,7 +207,7 @@ def _stage_align(
         return cached.segments
 
     try:
-        aligned = align_mod.align(segments, wav_path, language, cfg, progress)
+        aligned = align_mod.align(segments, wav_path, language, cfg, progress, should_cancel)
     finally:
         _release_memory(cfg)
 
@@ -246,7 +246,7 @@ def _stage_diarize(
     else:
         # 기존 in-process 경로(기본). 단계 종료 후 GPU 캐시 회수.
         try:
-            turns = diarize_mod.diarize(wav_path, cfg, min_speakers, max_speakers, progress)
+            turns = diarize_mod.diarize(wav_path, cfg, min_speakers, max_speakers, progress, should_cancel)
         finally:
             _release_memory(cfg)
 

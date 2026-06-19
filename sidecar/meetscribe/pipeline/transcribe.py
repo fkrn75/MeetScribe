@@ -53,6 +53,7 @@ def transcribe(
     wav_path: str,
     cfg: AppConfig,
     progress=None,
+    should_cancel=None,
 ) -> tuple[list[Segment], str]:
     """WAV 를 인식해 (세그먼트 목록, 감지 언어) 를 반환한다.
 
@@ -70,7 +71,7 @@ def transcribe(
 
     model = load_model(cfg)
     try:
-        segments, language = _run_transcribe(model, wav_path, cfg, progress)
+        segments, language = _run_transcribe(model, wav_path, cfg, progress, should_cancel)
     finally:
         # 호출자(runner)가 sequential_load 면 여기서 즉시 해제 효과를 보도록 참조 해제.
         # (실제 cuda 캐시 비우기는 runner 가 단계 종료 후 일괄 수행.)
@@ -81,8 +82,11 @@ def transcribe(
     return segments, language
 
 
-def _run_transcribe(model, wav_path: str, cfg: AppConfig, progress):
+def _run_transcribe(model, wav_path: str, cfg: AppConfig, progress, should_cancel=None):
     """실제 인식 루프. 언어는 cfg.language 강제(기본 ko), 없으면 자동 감지."""
+    # 순환 import 회피용 lazy import(runner 가 이 모듈을 먼저 적재하므로 top-level 금지).
+    from .runner import PipelineCancelled
+
     # cfg.language 가 빈 문자열/None 이면 자동 감지(language=None)
     forced_language = cfg.language or None
 
@@ -102,6 +106,9 @@ def _run_transcribe(model, wav_path: str, cfg: AppConfig, progress):
 
     results: list[Segment] = []
     for seg in seg_iter:
+        # 세그먼트마다 취소 확인 → 긴 인식 도중에도 즉시 중단(제너레이터 소비 중단 = 연산 중단).
+        if should_cancel is not None and should_cancel():
+            raise PipelineCancelled("사용자 취소")
         results.append(
             Segment(
                 start=float(seg.start),

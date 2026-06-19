@@ -30,6 +30,7 @@ def diarize(
     min_speakers: int | None = None,
     max_speakers: int | None = None,
     progress=None,
+    should_cancel=None,
 ) -> list[DiarizationTurn]:
     """오디오를 화자 구간으로 분리해 turn 목록을 반환한다(청크 처리).
 
@@ -58,11 +59,15 @@ def diarize(
     pipeline = _load_pipeline(cfg)
 
     try:
+        from .runner import PipelineCancelled  # lazy: 순환 import 회피
+
         duration = _audio_duration_sec(wav_path)
         chunk_sec = float(cfg.diarization_chunk_sec) if cfg.diarization_chunk_sec else 0.0
 
         if chunk_sec <= 0 or duration <= chunk_sec:
-            # 짧은 오디오: 한 번에 처리.
+            # 짧은 오디오: 한 번에 처리(단일 블로킹 호출이라 시작 직전에 취소 확인).
+            if should_cancel is not None and should_cancel():
+                raise PipelineCancelled("사용자 취소")
             turns = _diarize_window(
                 pipeline, wav_path, 0.0, duration, min_speakers, max_speakers
             )
@@ -72,7 +77,7 @@ def diarize(
 
         # 긴 오디오: 청크별 처리 후 라벨 정합.
         turns = _diarize_chunked(
-            pipeline, wav_path, duration, chunk_sec, min_speakers, max_speakers, progress
+            pipeline, wav_path, duration, chunk_sec, min_speakers, max_speakers, progress, should_cancel
         )
         if progress:
             progress(JobStage.DIARIZE, 1.0, f"화자분리 완료({_count_speakers(turns)}명)")
@@ -155,8 +160,11 @@ def _diarize_chunked(
     min_speakers: int | None,
     max_speakers: int | None,
     progress,
+    should_cancel=None,
 ) -> list[DiarizationTurn]:
     """오디오를 chunk_sec 단위로 처리하고 청크 간 화자 라벨을 정합해 합친다."""
+    from .runner import PipelineCancelled  # lazy: 순환 import 회피
+
     all_turns: list[DiarizationTurn] = []
     # 청크 로컬 라벨 → 전역 라벨 매핑(직전 청크 라벨 재사용으로 연속성 확보).
     label_map: dict[str, str] = {}
@@ -167,6 +175,9 @@ def _diarize_chunked(
     offset = 0.0
     chunk_idx = 0
     while offset < duration_sec:
+        # 청크마다 취소 확인.
+        if should_cancel is not None and should_cancel():
+            raise PipelineCancelled("사용자 취소")
         window = min(chunk_sec, duration_sec - offset)
         local_turns = _diarize_window(
             pipeline, wav_path, offset, window, min_speakers, max_speakers

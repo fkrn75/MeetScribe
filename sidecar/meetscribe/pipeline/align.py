@@ -28,6 +28,7 @@ def align(
     language: str,
     cfg: AppConfig,
     progress=None,
+    should_cancel=None,
 ) -> list[Segment]:
     """세그먼트에 단어 타임스탬프를 채워 반환한다. 실패 시 입력 그대로 반환.
 
@@ -47,8 +48,14 @@ def align(
     if progress:
         progress(JobStage.ALIGN, 0.0, "단어 정렬 시작")
 
+    # 순환 import 회피용 lazy import(취소 예외는 degrade 로 먹지 않고 전파해야 함).
+    from .runner import PipelineCancelled
+
     try:
-        result = _align_impl(segments, wav_path, language, cfg, progress)
+        result = _align_impl(segments, wav_path, language, cfg, progress, should_cancel)
+    except PipelineCancelled:
+        # 취소는 "정렬 실패"가 아니므로 즉시 전파(아래 broad except 에 먹히면 안 됨).
+        raise
     except Exception as exc:  # noqa: BLE001 — 어떤 실패든 degrade 로 흡수
         # graceful degrade: 정렬 실패가 전체 회의록 생성을 막아선 안 된다.
         logger.warning(
@@ -69,8 +76,10 @@ def _align_impl(
     language: str,
     cfg: AppConfig,
     progress,
+    should_cancel=None,
 ) -> list[Segment]:
     """실제 whisperx 정렬. 청크 단위로 끊어 모델을 재사용한다."""
+    from .runner import PipelineCancelled  # lazy: 순환 import 회피
     import whisperx  # lazy: 미설치 환경 보호
 
     device = cfg.torch_device
@@ -92,6 +101,9 @@ def _align_impl(
         aligned: list[Segment] = []
         total = len(chunks)
         for idx, group in enumerate(chunks):
+            # 청크마다 취소 확인.
+            if should_cancel is not None and should_cancel():
+                raise PipelineCancelled("사용자 취소")
             # whisperx.align 입력 형식: [{"start","end","text"}, ...]
             wx_segments = [{"start": s.start, "end": s.end, "text": s.text} for s in group]
             out = whisperx.align(
