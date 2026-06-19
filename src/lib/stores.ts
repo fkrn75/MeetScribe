@@ -192,6 +192,27 @@ export function editSegmentText(index: number, text: string): void {
   });
 }
 
+/**
+ * 특정 세그먼트 하나의 화자를 다른 화자로 재할당한다(인덱스 기준).
+ *
+ * 화자분리가 1초 안팎의 짧은 발화(빠른 주고받기)를 다른 사람으로 잘못 합쳤을 때
+ * 사용자가 수동 교정하는 용도 — pyannote community-1 으로도 분리가 불가능한 구간을
+ * 보완한다(설계서 9: 화자 라벨 불안정 대응). 세그먼트와 하위 단어의 speaker 를
+ * 함께 바꿔 mergeSpeaker(remapSegmentSpeaker)와 일관성을 유지한다.
+ */
+export function reassignSegmentSpeaker(index: number, newSpeakerId: string | null): void {
+  transcript.update((t) => {
+    if (!t) return t;
+    const seg = t.segments[index];
+    if (!seg) return t;
+    if (seg.speaker === newSpeakerId) return t; // 변경 없음
+    const segments = t.segments.slice();
+    const words = seg.words.map((w) => ({ ...w, speaker: newSpeakerId }));
+    segments[index] = { ...seg, speaker: newSpeakerId, words };
+    return { ...t, segments };
+  });
+}
+
 // ─────────────────────────────────────────────────────────────
 // 검색 / 파생 상태
 // ─────────────────────────────────────────────────────────────

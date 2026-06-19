@@ -9,11 +9,14 @@
     searchQuery,
     speakers,
     editSegmentText,
+    reassignSegmentSpeaker,
     type SpeakerMeta,
   } from "../stores";
 
   // 화자 메타 맵(반응형). id → SpeakerMeta.
   let speakerMap = $derived($speakers);
+  // 화자 선택 목록(팝오버 표시·숫자키 순서). 삽입 순서 보존.
+  let speakerList = $derived(Array.from(speakerMap.values()));
 
   /** 초 → mm:ss (1시간 넘으면 h:mm:ss). */
   function fmtTime(sec: number): string {
@@ -53,7 +56,44 @@
   function cancelEdit() {
     editingIndex = null;
   }
+
+  // ── 화자 재할당(짧은 발화 수동 교정) ──
+  // 팝오버가 열린 세그먼트 인덱스(null이면 닫힘).
+  let pickerIndex = $state<number | null>(null);
+
+  function togglePicker(index: number) {
+    pickerIndex = pickerIndex === index ? null : index;
+  }
+  function pickSpeaker(index: number, id: string | null) {
+    reassignSegmentSpeaker(index, id);
+    pickerIndex = null;
+  }
+  /** 팝오버에서 숫자키(1~N)로 빠르게 화자 선택, Esc로 닫기. */
+  function onPickerKey(e: KeyboardEvent, index: number) {
+    if (e.key === "Escape") {
+      pickerIndex = null;
+      return;
+    }
+    const n = Number(e.key);
+    if (Number.isInteger(n) && n >= 1 && n <= speakerList.length) {
+      e.preventDefault();
+      const sp = speakerList[n - 1];
+      if (sp) pickSpeaker(index, sp.id);
+    }
+  }
 </script>
+
+<svelte:window
+  onclick={(e) => {
+    // 팝오버 바깥 클릭 시 닫기(칩·팝오버는 .chip-wrap 내부라 유지).
+    if (
+      pickerIndex !== null &&
+      !(e.target as Element | null)?.closest?.(".chip-wrap")
+    ) {
+      pickerIndex = null;
+    }
+  }}
+/>
 
 <div class="transcript">
   <div class="toolbar">
@@ -78,9 +118,34 @@
         <div class="seg-row">
           <span class="time">{fmtTime(row.segment.start)}</span>
 
-          <span class="chip" style="--chip:{meta.color}">
-            <span class="dot" style="background:{meta.color}"></span>
-            {meta.label}
+          <span class="chip-wrap">
+            <button
+              class="chip"
+              style="--chip:{meta.color}"
+              title="클릭해서 화자 변경(숫자키로 빠른 선택)"
+              onclick={() => togglePicker(row.index)}
+              onkeydown={(e) => onPickerKey(e, row.index)}
+            >
+              <span class="dot" style="background:{meta.color}"></span>
+              {meta.label}
+            </button>
+            {#if pickerIndex === row.index}
+              <!-- 화자 선택 팝오버: 숫자키 1~N 또는 클릭으로 재할당 -->
+              <div class="picker" role="menu">
+                {#each speakerList as sp, i (sp.id)}
+                  <button
+                    class="picker-item"
+                    class:active={sp.id === row.segment.speaker}
+                    role="menuitem"
+                    onclick={() => pickSpeaker(row.index, sp.id)}
+                  >
+                    <span class="num">{i + 1}</span>
+                    <span class="dot" style="background:{sp.color}"></span>
+                    <span class="pl">{sp.label}</span>
+                  </button>
+                {/each}
+              </div>
+            {/if}
           </span>
 
           {#if editingIndex === row.index}
@@ -162,6 +227,11 @@
     color: var(--muted, #9aa3ad);
     padding-top: 3px;
   }
+  .chip-wrap {
+    position: relative;
+    display: inline-flex;
+    height: fit-content;
+  }
   .chip {
     display: inline-flex;
     align-items: center;
@@ -173,6 +243,62 @@
     color: var(--chip, #3b6fd4);
     background: color-mix(in srgb, var(--chip) 16%, transparent);
     height: fit-content;
+    white-space: nowrap;
+    border: none;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .chip:hover {
+    background: color-mix(in srgb, var(--chip) 30%, transparent);
+  }
+  .picker {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 140px;
+    padding: 4px;
+    background: var(--panel, #1b212b);
+    border: 1px solid var(--border, #3a4150);
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  }
+  .picker-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 5px 8px;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    color: var(--text, #e6e9ef);
+    font-size: 12.5px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .picker-item:hover {
+    background: var(--panel-hover, #222a36);
+  }
+  .picker-item.active {
+    background: color-mix(in srgb, var(--accent, #3b6fd4) 18%, transparent);
+  }
+  .num {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    background: var(--input, #161b22);
+    color: var(--muted, #9aa3ad);
+    font-size: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pl {
     white-space: nowrap;
   }
   .dot {
