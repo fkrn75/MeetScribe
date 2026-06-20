@@ -26,6 +26,24 @@ from meetscribe import runtime_torch
 if __name__ == "__main__":
     multiprocessing.freeze_support()  # 동결 자식 프로세스 무한 재기동 방지(필수)
     runtime_torch.ensure_on_path()  # torch 캐시가 있으면 sys.path 주입(모든 import 전)
+    # 진단용(프로덕션 영향 없음): MEETSCRIBE_TORCH_PROBE=1 이면 torch import 만 시도하고
+    # 전체 트레이스백을 출력한 뒤 종료한다. 동결본에서 온디맨드 torch 로드 문제를 추적.
+    import os as _os
+
+    if _os.environ.get("MEETSCRIBE_TORCH_PROBE") == "1":
+        import traceback as _tb
+
+        try:
+            import torch  # noqa: F401
+
+            print(
+                f"PROBE_OK torch={torch.__version__} cuda={torch.cuda.is_available()}",
+                flush=True,
+            )
+        except Exception:
+            print("PROBE_FAIL", flush=True)
+            _tb.print_exc()
+        raise SystemExit(0)
     from meetscribe.api import main
 
     raise SystemExit(main())

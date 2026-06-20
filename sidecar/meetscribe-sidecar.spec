@@ -32,6 +32,15 @@ datas += copy_metadata('tokenizers')
 datas += copy_metadata('filelock')
 datas += copy_metadata('numpy')
 datas += copy_metadata('packaging')
+# community-1(pyannote.audio 4.0) 의존: opentelemetry SDK/api 가 importlib.metadata 로
+# 자기 버전·엔트리포인트를 조회하고, opentelemetry.proto 는 protobuf 를 쓴다. 메타데이터 동봉.
+datas += copy_metadata('opentelemetry-api')
+datas += copy_metadata('opentelemetry-sdk')
+datas += copy_metadata('opentelemetry-semantic-conventions')
+datas += copy_metadata('opentelemetry-exporter-otlp-proto-http')
+datas += copy_metadata('opentelemetry-exporter-otlp-proto-common')
+datas += copy_metadata('opentelemetry-proto')
+datas += copy_metadata('protobuf')
 hiddenimports += collect_submodules('meetscribe')
 # torch/torchaudio 는 의도적으로 collect_all 제외(온디맨드). 나머지는 그대로 수집.
 tmp_ret = collect_all('whisperx')
@@ -64,6 +73,24 @@ tmp_ret = collect_all('sentencepiece')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('av')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+# ── community-1(pyannote.audio 4.0) 전환으로 추가된 의존성 수집 ──────────────────
+# soundfile: diarize.py 가 torchcodec 우회용으로 직접 import 한다(파형 직접 입력).
+#   libsndfile DLL 데이터를 함께 끌어와야 동결본에서 디코딩이 된다.
+tmp_ret = collect_all('soundfile')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+# opentelemetry: pyannote.audio 4.0 은 import 시점에 telemetry/metrics.py 를 로드하고,
+#   그 모듈이 opentelemetry(api/sdk/otlp http exporter/proto)를 최상단에서 무조건 import 한다.
+#   (PYANNOTE_METRICS_ENABLED=false 는 '전송'만 끄지 동결 그래프엔 모듈이 있어야 한다.)
+#   네임스페이스 패키지라 정적 분석이 일부를 놓칠 수 있어 통째로 수집한다.
+tmp_ret = collect_all('opentelemetry')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+# 네임스페이스 수집이 일부를 놓칠 때를 대비한 명시 백스톱(metrics.py 최상단 import 대응).
+hiddenimports += [
+    'opentelemetry.metrics',
+    'opentelemetry.sdk.metrics',
+    'opentelemetry.sdk.metrics.export',
+    'opentelemetry.exporter.otlp.proto.http.metric_exporter',
+]
 
 a = Analysis(
     ['entry.py'],
@@ -74,7 +101,11 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    # torchcodec 제외(community-1): pyannote audio/core/io.py 가 torchcodec import 를
+    # try/except 로 감싸고, MeetScribe 는 waveform dict 를 직접 넘겨 디코더를 안 쓴다.
+    # → 망가지는 libtorchcodec_core*.dll(ffmpeg 공유DLL 의존)을 동봉하지 않고,
+    #   동결본에선 ImportError 가 조용히 잡혀 soundfile 우회로 디코딩된다.
+    excludes=['torchcodec'],
     noarchive=False,
     optimize=0,
 )
@@ -97,6 +128,11 @@ def _keep(entry_name):
 a.binaries = [x for x in a.binaries if _keep(x[0])]
 a.datas = [x for x in a.datas if _keep(x[0])]
 a.pure = [x for x in a.pure if _keep(x[0])]
+
+# 배포본에 데모 오디오(pyannote 내장 sample.wav)를 넣지 않는다(사용자 결정).
+# collect_all('pyannote.audio') 가 데이터로 끌어오므로 후처리로 제거한다.
+a.datas = [x for x in a.datas
+           if 'pyannote/audio/sample/' not in x[0].lower().replace('\\', '/')]
 
 pyz = PYZ(a.pure)
 
