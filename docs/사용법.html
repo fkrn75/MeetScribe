@@ -217,8 +217,8 @@
               <td><span class="tag-free">공개</span> · 첫 실행 시 자동</td>
             </tr>
             <tr>
-              <td><code>pyannote/speaker-diarization-3.1</code><br><code>pyannote/segmentation-3.0</code></td>
-              <td>화자 분리</td>
+              <td><code>pyannote/speaker-diarization-community-1</code></td>
+              <td>화자 분리(통합 모델)</td>
               <td><span class="tag-gated">gated</span> · <strong>HF 토큰 + 약관 동의 필요</strong></td>
             </tr>
           </tbody>
@@ -228,11 +228,11 @@
         <ol class="steps">
           <li><a href="https://huggingface.co/join" target="_blank" rel="noopener">huggingface.co</a> 에 가입합니다(무료).</li>
           <li>
-            아래 <strong>두 모델 페이지</strong>에 들어가 약관에 동의(<em>Agree / Access repository</em>)합니다:
+            아래 <strong>모델 페이지</strong>에 들어가 약관에 동의(<em>Agree / Access repository</em>)합니다:
             <ul>
-              <li><a href="https://huggingface.co/pyannote/speaker-diarization-3.1" target="_blank" rel="noopener">pyannote/speaker-diarization-3.1</a></li>
-              <li><a href="https://huggingface.co/pyannote/segmentation-3.0" target="_blank" rel="noopener">pyannote/segmentation-3.0</a></li>
+              <li><a href="https://huggingface.co/pyannote/speaker-diarization-community-1" target="_blank" rel="noopener">pyannote/speaker-diarization-community-1</a></li>
             </ul>
+            <span style="font-size:13.5px;color:var(--muted);">(이전 버전 <code>pyannote/speaker-diarization-3.1</code>로 되돌릴 때만 그 모델과 <code>pyannote/segmentation-3.0</code> 약관에 동의 — 환경변수 <code>MEETSCRIBE_DIARIZE_MODEL</code>로 전환)</span>
           </li>
           <li>
             액세스 토큰을 만듭니다 — <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">설정 → Access Tokens</a> →
@@ -306,9 +306,14 @@
 
         <h3>설치 버전 (인스톨러)</h3>
         <p>
-          <code>npm run tauri build -- --bundles nsis</code> 로 <strong>약 200MB 설치 파일</strong>
-          (<code>MeetScribe_…_x64-setup.exe</code>)을 만듭니다. 받는 사람은
-          <strong>Python·Node·Rust 없이</strong> 설치 파일만 실행하면 됩니다.
+          <strong>받는 사람</strong>은 <a href="https://github.com/fkrn75/MeetScribe/releases" target="_blank" rel="noopener">GitHub Releases</a>에서
+          <code>MeetScribe_…_x64-setup.exe</code>(<strong>약 200MB</strong>)를 내려받아 더블클릭하면 설치됩니다 —
+          <strong>Python·Node·Rust 없이</strong> 동작합니다.
+        </p>
+        <p style="font-size:14px;color:var(--muted);">
+          (직접 빌드할 때는 프로젝트 루트에서 <code>npm run tauri build</code> — <code>tauri.conf.json</code>의
+          <code>targets</code>가 <code>["nsis"]</code>라 <code>setup.exe</code>가 생성됩니다. 빌드 전
+          <code>scripts/stage-sidecar-bundle.ps1</code>로 동결 사이드카를 번들 위치에 배치해야 합니다.)
         </p>
         <div class="callout c-tip">
           <span class="ttl">💡 첫 실행 시 한 번만 — 음성 엔진 다운로드</span>
@@ -361,7 +366,7 @@
         <table>
           <thead><tr><th>증상</th><th>해결</th></tr></thead>
           <tbody>
-            <tr><td>화자 분리가 안 됨 / "HF 토큰" 배너</td><td><a href="#hf">3장</a> 확인 — 두 모델 약관 동의 + <strong>classic Read</strong> 토큰 + <code>HF_TOKEN</code> 설정 후 앱 재시작</td></tr>
+            <tr><td>화자 분리가 안 됨 / "HF 토큰" 배너</td><td><a href="#hf">3장</a> 확인 — community-1 약관 동의 + <strong>classic Read</strong> 토큰 + <code>HF_TOKEN</code> 설정 후 앱 재시작</td></tr>
             <tr><td>"GPU(CUDA) 미감지" 배너</td><td>NVIDIA 드라이버·CUDA 확인. 없으면 CPU로 동작(느림)</td></tr>
             <tr><td>"ffmpeg를 찾을 수 없습니다"</td><td>ffmpeg 설치 후 시스템 <code>PATH</code>에 등록</td></tr>
             <tr><td>2~3시간 회의에서 메모리 부족</td><td><code>MEETSCRIBE_DIARIZE_SUBPROCESS=1</code> 설정 후 재시작</td></tr>
